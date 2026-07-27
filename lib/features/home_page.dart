@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import '../mezmur_bloc.dart';
 import '../mezmur_model.dart';
 import '../features/theme_settings.dart';
-import 'audio_player_page.dart';
 import '../models/sub_category_model.dart';
+import 'audio_player_page.dart';
 import 'sub_category_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -47,9 +47,10 @@ class _HomePageState extends State<HomePage> {
               _themeOption(context, 'White', Colors.white, Icons.light_mode),
               _themeOption(context, 'Sepia', const Color(0xFFF4ECD8),
                   Icons.auto_stories),
+              _themeOption(context, 'Midnight', const Color(0xFF0D1B2A),
+                  Icons.nights_stay),
               _themeOption(
-                  context, 'Midnight', Color(0xFF0D1B2A), Icons.nights_stay),
-              _themeOption(context, 'Forest', Color(0xFF1B2E1B), Icons.nature),
+                  context, 'Forest', const Color(0xFF1B2E1B), Icons.nature),
             ],
           ),
         );
@@ -73,7 +74,10 @@ class _HomePageState extends State<HomePage> {
         ),
         child: Icon(icon,
             size: 20,
-            color: name == 'Black' || name == 'Dark'
+            color: name == 'Black' ||
+                    name == 'Dark' ||
+                    name == 'Midnight' ||
+                    name == 'Forest'
                 ? Colors.white
                 : Colors.black87),
       ),
@@ -166,10 +170,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategories() {
-    final categories = ['ሁሉም', 'ዓመታዊ በዓላት', 'በገና', 'ጾም', 'ወረብ', 'ወርሀዊ በዓላት'];
+    final categories = [
+      'ሁሉም',
+      'ወርሃዊ በዓላት',
+      'ዓመታዊ በዓላት',
+      'በገና',
+      'ጾም',
+      'ወረብ',
+      'ቅዱሳን'
+    ];
     final icons = [
       Icons.music_note,
-      Icons.celebration,
+      Icons.event,
+      Icons.event_repeat,
       Icons.queue_music,
       Icons.self_improvement,
       Icons.calendar_month,
@@ -187,11 +200,8 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               if (index == 0) {
                 context.read<MezmurBloc>().add(const LoadMezmurs());
-              } else if (categories[index] == 'ጾም') {
-                context
-                    .read<MezmurBloc>()
-                    .add(FilterByCategory(categories[index]));
-              } else if (categories[index] == 'በገና') {
+              } else if (categories[index] == 'ጾም' ||
+                  categories[index] == 'በገና') {
                 context
                     .read<MezmurBloc>()
                     .add(FilterByCategory(categories[index]));
@@ -208,10 +218,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   );
-                } else {
-                  context
-                      .read<MezmurBloc>()
-                      .add(FilterByCategory(categories[index]));
                 }
               }
             },
@@ -241,7 +247,7 @@ class _HomePageState extends State<HomePage> {
                     categories[index],
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodyLarge?.color,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,

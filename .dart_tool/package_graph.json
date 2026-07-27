@@ -1,12 +1,13 @@
 {
   "roots": [
-    "mezmur2"
+    "Mezmur2"
   ],
   "packages": [
     {
-      "name": "mezmur2",
+      "name": "Mezmur2",
       "version": "1.0.0+1",
       "dependencies": [
+        "audio_session",
         "equatable",
         "flutter",
         "flutter_bloc",
@@ -53,6 +54,16 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "audio_session",
+      "version": "0.1.25",
+      "dependencies": [
+        "flutter",
+        "flutter_web_plugins",
+        "meta",
+        "rxdart"
       ]
     },
     {
@@ -278,6 +289,11 @@
       ]
     },
     {
+      "name": "rxdart",
+      "version": "0.28.0",
+      "dependencies": []
+    },
+    {
       "name": "shared_preferences_windows",
       "version": "2.4.1",
       "dependencies": [
@@ -376,21 +392,6 @@
         "path_provider_linux",
         "path_provider_platform_interface",
         "path_provider_windows"
-      ]
-    },
-    {
-      "name": "rxdart",
-      "version": "0.28.0",
-      "dependencies": []
-    },
-    {
-      "name": "audio_session",
-      "version": "0.1.25",
-      "dependencies": [
-        "flutter",
-        "flutter_web_plugins",
-        "meta",
-        "rxdart"
       ]
     },
     {

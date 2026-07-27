@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
 import '../mezmur_bloc.dart';
 import '../mezmur_model.dart';
-import '../widget/app_theme.dart';
 import '../audio_service.dart';
 
 class AudioPlayerPage extends StatefulWidget {
@@ -25,9 +24,15 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
   final AudioService _audioService = AudioService();
 
   bool _isPlaying = false;
+  bool _isShuffle = false;
+  bool _isRepeat = false;
+  bool _isDragging = false;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = const Duration(minutes: 5, seconds: 39);
   bool _showLyrics = true;
+  late MezmurModel _currentMezmur;
+  List<MezmurModel> _playlist = [];
+  int _currentIndex = 0;
 
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration>? _durationSubscription;
@@ -36,6 +41,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
   @override
   void initState() {
     super.initState();
+    _currentMezmur = widget.mezmur;
+    _playlist = MezmurModel.mockMezmurList;
+    _currentIndex = _playlist.indexOf(widget.mezmur);
 
     _rotationController = AnimationController(
       duration: const Duration(seconds: 10),
@@ -43,44 +51,36 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     );
     _rotationAnimation =
         Tween<double>(begin: 0, end: 1).animate(_rotationController);
-
     _setupAudioListeners();
     _startPlayback();
+
+    // Set audio playlist
+    _audioService.setPlaylist(_playlist.map((m) => m.audioUrl).toList());
   }
 
   void _setupAudioListeners() {
     _positionSubscription = _audioService.positionStream.listen((position) {
-      if (mounted) {
-        setState(() {
-          _currentPosition = position;
-        });
+      if (mounted && !_isDragging) {
+        setState(() => _currentPosition = position);
       }
     });
-
     _durationSubscription = _audioService.durationStream.listen((duration) {
-      if (mounted) {
-        setState(() {
-          _totalDuration = duration;
-        });
-      }
+      if (mounted) setState(() => _totalDuration = duration);
     });
-
     _playingSubscription = _audioService.playingStream.listen((isPlaying) {
       if (mounted) {
-        setState(() {
-          _isPlaying = isPlaying;
-          if (isPlaying) {
-            _rotationController.repeat();
-          } else {
-            _rotationController.stop();
-          }
-        });
+        setState(() => _isPlaying = isPlaying);
+        if (isPlaying) {
+          _rotationController.repeat();
+        } else {
+          _rotationController.stop();
+        }
       }
     });
   }
 
   Future<void> _startPlayback() async {
-    await _audioService.play(widget.mezmur.audioUrl);
+    await _audioService.play(_currentMezmur.audioUrl);
   }
 
   void _togglePlayPause() {
@@ -91,9 +91,37 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     }
   }
 
-  void _onSeek(double value) {
-    final newPosition = Duration(seconds: value.toInt());
-    _audioService.seek(newPosition);
+  void _playNext() {
+    if (_isRepeat) {
+      _audioService.play(_currentMezmur.audioUrl);
+      return;
+    }
+    if (_isShuffle) {
+      _currentIndex = DateTime.now().millisecondsSinceEpoch % _playlist.length;
+    } else {
+      _currentIndex = (_currentIndex + 1) % _playlist.length;
+    }
+    setState(() {
+      _currentMezmur = _playlist[_currentIndex];
+    });
+    _audioService.play(_currentMezmur.audioUrl);
+  }
+
+  void _playPrevious() {
+    _currentIndex = (_currentIndex - 1) % _playlist.length;
+    if (_currentIndex < 0) _currentIndex = _playlist.length - 1;
+    setState(() {
+      _currentMezmur = _playlist[_currentIndex];
+    });
+    _audioService.play(_currentMezmur.audioUrl);
+  }
+
+  void _toggleShuffle() {
+    setState(() => _isShuffle = !_isShuffle);
+  }
+
+  void _toggleRepeat() {
+    setState(() => _isRepeat = !_isRepeat);
   }
 
   @override
@@ -109,19 +137,15 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.pureBlack,
-      body: Container(
-        decoration: AppTheme.premiumGradient,
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(),
-              Expanded(
-                child: _showLyrics ? _buildLyricsView() : _buildAlbumArt(),
-              ),
-              _buildAudioControls(),
-            ],
-          ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(),
+            Expanded(
+                child: _showLyrics ? _buildLyricsView() : _buildAlbumArt()),
+            _buildAudioControls(),
+          ],
         ),
       ),
     );
@@ -137,28 +161,28 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
               _audioService.stop();
               Navigator.pop(context);
             },
-            icon: const Icon(Icons.arrow_back_ios, color: AppTheme.primaryGold),
+            icon: Icon(Icons.arrow_back_ios,
+                color: Theme.of(context).primaryColor),
           ),
           const Spacer(),
           IconButton(
-            onPressed: () {
-              setState(() {
-                _showLyrics = !_showLyrics;
-              });
-            },
+            onPressed: () => setState(() => _showLyrics = !_showLyrics),
             icon: Icon(
               _showLyrics ? Icons.album : Icons.lyrics,
-              color: AppTheme.primaryGold,
+              color: Theme.of(context).primaryColor,
             ),
           ),
           IconButton(
             onPressed: () {
-              context.read<MezmurBloc>().add(ToggleFavorite(widget.mezmur.id));
+              context.read<MezmurBloc>().add(ToggleFavorite(_currentMezmur.id));
             },
             icon: Icon(
-              widget.mezmur.isFavorite ? Icons.favorite : Icons.favorite_border,
-              color:
-                  widget.mezmur.isFavorite ? Colors.red : AppTheme.primaryGold,
+              _currentMezmur.isFavorite
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+              color: _currentMezmur.isFavorite
+                  ? Colors.red
+                  : Theme.of(context).primaryColor,
             ),
           ),
         ],
@@ -181,16 +205,12 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
                   height: 250,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primaryGold, AppTheme.darkGold],
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).primaryColor,
+                        Theme.of(context).primaryColor.withOpacity(0.7),
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryGold.withOpacity(0.4),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
                   ),
                   child: const Icon(Icons.music_note,
                       size: 80, color: Colors.black),
@@ -200,18 +220,16 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
           ),
           const SizedBox(height: 40),
           Text(
-            widget.mezmur.title,
+            _currentMezmur.title,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryGold,
+                  color: Theme.of(context).primaryColor,
                 ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          Text(
-            widget.mezmur.artist,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(_currentMezmur.artist,
+              style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     );
@@ -222,8 +240,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: AppTheme.cardBlack,
-        border: Border.all(color: AppTheme.primaryGold.withOpacity(0.3)),
+        color: Theme.of(context).cardColor,
       ),
       child: Column(
         children: [
@@ -232,32 +249,29 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
             child: Column(
               children: [
                 Text(
-                  widget.mezmur.title,
+                  _currentMezmur.title,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryGold,
+                        color: Theme.of(context).primaryColor,
                       ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  widget.mezmur.artist,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text(_currentMezmur.artist,
+                    style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
           ),
-          Divider(color: AppTheme.primaryGold.withOpacity(0.3)),
+          Divider(color: Theme.of(context).primaryColor.withOpacity(0.3)),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Text(
-                widget.mezmur.lyrics,
+                _currentMezmur.lyrics,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       height: 2.0,
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -272,98 +286,98 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceBlack,
+        color: Theme.of(context).cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border(
-            top: BorderSide(color: AppTheme.primaryGold.withOpacity(0.3))),
       ),
       child: Column(
         children: [
-          Column(
-            children: [
-              SliderTheme(
-                data: SliderThemeData(
-                  trackHeight: 4,
-                  thumbShape:
-                      const RoundSliderThumbShape(enabledThumbRadius: 6),
-                  overlayShape:
-                      const RoundSliderOverlayShape(overlayRadius: 12),
-                  activeTrackColor: AppTheme.primaryGold,
-                  inactiveTrackColor: AppTheme.primaryGold.withOpacity(0.2),
-                  thumbColor: AppTheme.primaryGold,
-                ),
-                child: Slider(
-                  value: _totalDuration.inSeconds > 0
-                      ? _currentPosition.inSeconds.toDouble().clamp(
-                            0.0,
-                            _totalDuration.inSeconds.toDouble(),
-                          )
-                      : 0.0,
-                  max: _totalDuration.inSeconds > 0
-                      ? _totalDuration.inSeconds.toDouble()
-                      : 1.0,
-                  onChanged: _onSeek,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _formatDuration(_currentPosition),
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                    Text(
-                      _formatDuration(_totalDuration),
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          SliderTheme(
+            data: SliderThemeData(
+              trackHeight: 4,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              activeTrackColor: Theme.of(context).primaryColor,
+              inactiveTrackColor:
+                  Theme.of(context).primaryColor.withOpacity(0.2),
+              thumbColor: Theme.of(context).primaryColor,
+            ),
+            child: Slider(
+              value: _totalDuration.inSeconds > 0
+                  ? _currentPosition.inSeconds
+                      .toDouble()
+                      .clamp(0.0, _totalDuration.inSeconds.toDouble())
+                  : 0.0,
+              max: _totalDuration.inSeconds > 0
+                  ? _totalDuration.inSeconds.toDouble()
+                  : 1.0,
+              onChanged: (value) {
+                _isDragging = true;
+                setState(() {
+                  _currentPosition = Duration(seconds: value.toInt());
+                });
+              },
+              onChangeEnd: (value) {
+                _isDragging = false;
+                _audioService.seek(Duration(seconds: value.toInt()));
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(_formatDuration(_currentPosition),
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                Text(_formatDuration(_totalDuration),
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.shuffle, color: AppTheme.primaryGold),
-                iconSize: 28,
+                onPressed: _toggleShuffle,
+                icon: Icon(Icons.shuffle,
+                    color: _isShuffle
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey,
+                    size: 28),
               ),
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.skip_previous,
-                    color: AppTheme.primaryGold),
-                iconSize: 36,
+                onPressed: _playPrevious,
+                icon: Icon(Icons.skip_previous,
+                    color: Theme.of(context).primaryColor, size: 36),
               ),
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primaryGold, AppTheme.darkGold],
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withOpacity(0.7)
+                    ],
                   ),
                 ),
                 child: IconButton(
                   onPressed: _togglePlayPause,
-                  icon: Icon(
-                    _isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: Colors.black,
-                  ),
-                  iconSize: 40,
-                  padding: const EdgeInsets.all(16),
+                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow,
+                      color: Colors.black, size: 40),
                 ),
               ),
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.skip_next, color: AppTheme.primaryGold),
-                iconSize: 36,
+                onPressed: _playNext,
+                icon: Icon(Icons.skip_next,
+                    color: Theme.of(context).primaryColor, size: 36),
               ),
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.repeat, color: AppTheme.primaryGold),
-                iconSize: 28,
+                onPressed: _toggleRepeat,
+                icon: Icon(Icons.repeat,
+                    color: _isRepeat
+                        ? Theme.of(context).primaryColor
+                        : Colors.grey,
+                    size: 28),
               ),
             ],
           ),
@@ -374,27 +388,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
+    return '${twoDigits(duration.inMinutes.remainder(60))}:${twoDigits(duration.inSeconds.remainder(60))}';
   }
 }
 
 class AnimatedBuilder extends StatelessWidget {
   final Animation<double> animation;
   final Widget Function(BuildContext, Widget?) builder;
-
-  const AnimatedBuilder({
-    super.key,
-    required this.animation,
-    required this.builder,
-  });
+  const AnimatedBuilder(
+      {super.key, required this.animation, required this.builder});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: builder,
-    );
+    return AnimatedBuilder(animation: animation, builder: builder);
   }
 }
