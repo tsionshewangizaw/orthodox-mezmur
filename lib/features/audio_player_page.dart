@@ -4,14 +4,12 @@ import 'dart:async';
 import '../mezmur_bloc.dart';
 import '../mezmur_model.dart';
 import '../audio_service.dart';
+import '../services/favorites_service.dart';
 
 class AudioPlayerPage extends StatefulWidget {
   final MezmurModel mezmur;
 
-  const AudioPlayerPage({
-    super.key,
-    required this.mezmur,
-  });
+  const AudioPlayerPage({super.key, required this.mezmur});
 
   @override
   State<AudioPlayerPage> createState() => _AudioPlayerPageState();
@@ -33,6 +31,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
   late MezmurModel _currentMezmur;
   List<MezmurModel> _playlist = [];
   int _currentIndex = 0;
+  bool _isFav = false;
 
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration>? _durationSubscription;
@@ -44,25 +43,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     _currentMezmur = widget.mezmur;
     _playlist = MezmurModel.mockMezmurList;
     _currentIndex = _playlist.indexOf(widget.mezmur);
+    _checkFavorite();
 
-    _rotationController = AnimationController(
-      duration: const Duration(seconds: 10),
-      vsync: this,
-    );
+    _rotationController =
+        AnimationController(duration: const Duration(seconds: 10), vsync: this);
     _rotationAnimation =
         Tween<double>(begin: 0, end: 1).animate(_rotationController);
     _setupAudioListeners();
     _startPlayback();
-
-    // Set audio playlist
     _audioService.setPlaylist(_playlist.map((m) => m.audioUrl).toList());
+  }
+
+  void _checkFavorite() async {
+    final fav = await FavoritesService.isFavorite(_currentMezmur.id);
+    if (mounted) setState(() => _isFav = fav);
   }
 
   void _setupAudioListeners() {
     _positionSubscription = _audioService.positionStream.listen((position) {
-      if (mounted && !_isDragging) {
-        setState(() => _currentPosition = position);
-      }
+      if (mounted && !_isDragging) setState(() => _currentPosition = position);
     });
     _durationSubscription = _audioService.durationStream.listen((duration) {
       if (mounted) setState(() => _totalDuration = duration);
@@ -101,27 +100,25 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     } else {
       _currentIndex = (_currentIndex + 1) % _playlist.length;
     }
-    setState(() {
-      _currentMezmur = _playlist[_currentIndex];
-    });
+    setState(() => _currentMezmur = _playlist[_currentIndex]);
+    _checkFavorite();
     _audioService.play(_currentMezmur.audioUrl);
   }
 
   void _playPrevious() {
     _currentIndex = (_currentIndex - 1) % _playlist.length;
     if (_currentIndex < 0) _currentIndex = _playlist.length - 1;
-    setState(() {
-      _currentMezmur = _playlist[_currentIndex];
-    });
+    setState(() => _currentMezmur = _playlist[_currentIndex]);
+    _checkFavorite();
     _audioService.play(_currentMezmur.audioUrl);
   }
 
-  void _toggleShuffle() {
-    setState(() => _isShuffle = !_isShuffle);
-  }
+  void _toggleShuffle() => setState(() => _isShuffle = !_isShuffle);
+  void _toggleRepeat() => setState(() => _isRepeat = !_isRepeat);
 
-  void _toggleRepeat() {
-    setState(() => _isRepeat = !_isRepeat);
+  void _toggleFavorite() async {
+    await FavoritesService.toggleFavorite(_currentMezmur.id);
+    _checkFavorite();
   }
 
   @override
@@ -167,23 +164,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
           const Spacer(),
           IconButton(
             onPressed: () => setState(() => _showLyrics = !_showLyrics),
-            icon: Icon(
-              _showLyrics ? Icons.album : Icons.lyrics,
-              color: Theme.of(context).primaryColor,
-            ),
+            icon: Icon(_showLyrics ? Icons.album : Icons.lyrics,
+                color: Theme.of(context).primaryColor),
           ),
           IconButton(
-            onPressed: () {
-              context.read<MezmurBloc>().add(ToggleFavorite(_currentMezmur.id));
-            },
-            icon: Icon(
-              _currentMezmur.isFavorite
-                  ? Icons.favorite
-                  : Icons.favorite_border,
-              color: _currentMezmur.isFavorite
-                  ? Colors.red
-                  : Theme.of(context).primaryColor,
-            ),
+            onPressed: _toggleFavorite,
+            icon: Icon(_isFav ? Icons.favorite : Icons.favorite_border,
+                color: _isFav ? Colors.red : Theme.of(context).primaryColor),
           ),
         ],
       ),
@@ -205,12 +192,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
                   height: 250,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withOpacity(0.7),
-                      ],
-                    ),
+                    gradient: LinearGradient(colors: [
+                      Theme.of(context).primaryColor,
+                      Theme.of(context).primaryColor.withOpacity(0.7)
+                    ]),
                   ),
                   child: const Icon(Icons.music_note,
                       size: 80, color: Colors.black),
@@ -219,14 +204,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
             },
           ),
           const SizedBox(height: 40),
-          Text(
-            _currentMezmur.title,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          Text(_currentMezmur.title,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
-            textAlign: TextAlign.center,
-          ),
+                  color: Theme.of(context).primaryColor),
+              textAlign: TextAlign.center),
           const SizedBox(height: 8),
           Text(_currentMezmur.artist,
               style: Theme.of(context).textTheme.titleMedium),
@@ -239,23 +221,19 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Theme.of(context).cardColor,
-      ),
+          borderRadius: BorderRadius.circular(20),
+          color: Theme.of(context).cardColor),
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                Text(
-                  _currentMezmur.title,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                Text(_currentMezmur.title,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
+                        color: Theme.of(context).primaryColor),
+                    textAlign: TextAlign.center),
                 const SizedBox(height: 8),
                 Text(_currentMezmur.artist,
                     style: Theme.of(context).textTheme.titleMedium),
@@ -266,15 +244,10 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: Text(
-                _currentMezmur.lyrics,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 2.0,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                textAlign: TextAlign.center,
-              ),
+              child: Text(_currentMezmur.lyrics,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      height: 2.0, fontSize: 18, fontWeight: FontWeight.w500),
+                  textAlign: TextAlign.center),
             ),
           ),
         ],
@@ -286,20 +259,18 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-      ),
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30))),
       child: Column(
         children: [
           SliderTheme(
             data: SliderThemeData(
-              trackHeight: 4,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              activeTrackColor: Theme.of(context).primaryColor,
-              inactiveTrackColor:
-                  Theme.of(context).primaryColor.withOpacity(0.2),
-              thumbColor: Theme.of(context).primaryColor,
-            ),
+                trackHeight: 4,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                activeTrackColor: Theme.of(context).primaryColor,
+                inactiveTrackColor:
+                    Theme.of(context).primaryColor.withOpacity(0.2),
+                thumbColor: Theme.of(context).primaryColor),
             child: Slider(
               value: _totalDuration.inSeconds > 0
                   ? _currentPosition.inSeconds
@@ -311,9 +282,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
                   : 1.0,
               onChanged: (value) {
                 _isDragging = true;
-                setState(() {
-                  _currentPosition = Duration(seconds: value.toInt());
-                });
+                setState(
+                    () => _currentPosition = Duration(seconds: value.toInt()));
               },
               onChangeEnd: (value) {
                 _isDragging = false;
@@ -338,47 +308,39 @@ class _AudioPlayerPageState extends State<AudioPlayerPage>
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               IconButton(
-                onPressed: _toggleShuffle,
-                icon: Icon(Icons.shuffle,
-                    color: _isShuffle
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey,
-                    size: 28),
-              ),
+                  onPressed: _toggleShuffle,
+                  icon: Icon(Icons.shuffle,
+                      color: _isShuffle
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
+                      size: 28)),
               IconButton(
-                onPressed: _playPrevious,
-                icon: Icon(Icons.skip_previous,
-                    color: Theme.of(context).primaryColor, size: 36),
-              ),
+                  onPressed: _playPrevious,
+                  icon: Icon(Icons.skip_previous,
+                      color: Theme.of(context).primaryColor, size: 36)),
               Container(
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(colors: [
                       Theme.of(context).primaryColor,
                       Theme.of(context).primaryColor.withOpacity(0.7)
-                    ],
-                  ),
-                ),
+                    ])),
                 child: IconButton(
-                  onPressed: _togglePlayPause,
-                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow,
-                      color: Colors.black, size: 40),
-                ),
+                    onPressed: _togglePlayPause,
+                    icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow,
+                        color: Colors.black, size: 40)),
               ),
               IconButton(
-                onPressed: _playNext,
-                icon: Icon(Icons.skip_next,
-                    color: Theme.of(context).primaryColor, size: 36),
-              ),
+                  onPressed: _playNext,
+                  icon: Icon(Icons.skip_next,
+                      color: Theme.of(context).primaryColor, size: 36)),
               IconButton(
-                onPressed: _toggleRepeat,
-                icon: Icon(Icons.repeat,
-                    color: _isRepeat
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey,
-                    size: 28),
-              ),
+                  onPressed: _toggleRepeat,
+                  icon: Icon(Icons.repeat,
+                      color: _isRepeat
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
+                      size: 28)),
             ],
           ),
         ],

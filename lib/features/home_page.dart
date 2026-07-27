@@ -5,8 +5,10 @@ import '../mezmur_bloc.dart';
 import '../mezmur_model.dart';
 import '../features/theme_settings.dart';
 import '../models/sub_category_model.dart';
+import '../services/favorites_service.dart';
 import 'audio_player_page.dart';
 import 'sub_category_page.dart';
+import 'favorites_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,27 +32,27 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void _showThemeDialog(BuildContext context) {
+  void _showThemeDialog(BuildContext ctx) {
     showDialog(
-      context: context,
-      builder: (context) {
+      context: ctx,
+      builder: (ctx) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
+          backgroundColor: Theme.of(ctx).cardColor,
           title: const Text('Choose Theme',
               style: TextStyle(fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _themeOption(context, 'Black', Colors.black, Icons.dark_mode),
+              _themeOption(ctx, 'Black', Colors.black, Icons.dark_mode),
               _themeOption(
-                  context, 'Dark', const Color(0xFF1A1A1A), Icons.nights_stay),
-              _themeOption(context, 'White', Colors.white, Icons.light_mode),
-              _themeOption(context, 'Sepia', const Color(0xFFF4ECD8),
-                  Icons.auto_stories),
-              _themeOption(context, 'Midnight', const Color(0xFF0D1B2A),
-                  Icons.nights_stay),
+                  ctx, 'Dark', const Color(0xFF1A1A1A), Icons.nights_stay),
+              _themeOption(ctx, 'White', Colors.white, Icons.light_mode),
               _themeOption(
-                  context, 'Forest', const Color(0xFF1B2E1B), Icons.nature),
+                  ctx, 'Sepia', const Color(0xFFF4ECD8), Icons.auto_stories),
+              _themeOption(
+                  ctx, 'Midnight', const Color(0xFF0D1B2A), Icons.nights_stay),
+              _themeOption(
+                  ctx, 'Forest', const Color(0xFF1B2E1B), Icons.nature),
             ],
           ),
         );
@@ -59,8 +61,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _themeOption(
-      BuildContext context, String name, Color color, IconData icon) {
-    final themeSettings = Provider.of<ThemeSettings>(context);
+      BuildContext ctx, String name, Color color, IconData icon) {
+    final themeSettings = Provider.of<ThemeSettings>(ctx);
     final isSelected = themeSettings.selectedTheme == name;
 
     return ListTile(
@@ -87,7 +89,7 @@ class _HomePageState extends State<HomePage> {
           : null,
       onTap: () {
         themeSettings.setTheme(name);
-        Navigator.pop(context);
+        Navigator.pop(ctx);
       },
     );
   }
@@ -135,10 +137,24 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          IconButton(
-            icon: Icon(Icons.palette_outlined,
-                color: Theme.of(context).primaryColor, size: 28),
-            onPressed: () => _showThemeDialog(context),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.favorite,
+                    color: Theme.of(context).primaryColor, size: 28),
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const FavoritesPage()));
+                },
+              ),
+              IconButton(
+                icon: Icon(Icons.palette_outlined,
+                    color: Theme.of(context).primaryColor, size: 28),
+                onPressed: () => _showThemeDialog(context),
+              ),
+            ],
           ),
         ],
       ),
@@ -177,16 +193,14 @@ class _HomePageState extends State<HomePage> {
       'በገና',
       'ጾም',
       'ወረብ',
-      'ቅዱሳን'
     ];
     final icons = [
       Icons.music_note,
       Icons.event,
       Icons.event_repeat,
       Icons.queue_music,
-      Icons.self_improvement,
-      Icons.calendar_month,
-      Icons.church,
+      Icons.menu_book,
+      Icons.church
     ];
 
     return SizedBox(
@@ -210,14 +224,11 @@ class _HomePageState extends State<HomePage> {
                     SubCategoryData.getSubCategories()[categories[index]];
                 if (subCats != null) {
                   Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SubCategoryPage(
-                        categoryName: categories[index],
-                        subCategories: subCats,
-                      ),
-                    ),
-                  );
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => SubCategoryPage(
+                              categoryName: categories[index],
+                              subCategories: subCats)));
                 }
               }
             },
@@ -225,14 +236,10 @@ class _HomePageState extends State<HomePage> {
               width: 80,
               margin: const EdgeInsets.symmetric(horizontal: 5),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.3),
-                    Theme.of(context).primaryColor.withOpacity(0.1),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
+                gradient: LinearGradient(colors: [
+                  Theme.of(context).primaryColor.withOpacity(0.3),
+                  Theme.of(context).primaryColor.withOpacity(0.1)
+                ], begin: Alignment.topCenter, end: Alignment.bottomCenter),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
                     color: Theme.of(context).primaryColor.withOpacity(0.3)),
@@ -243,15 +250,12 @@ class _HomePageState extends State<HomePage> {
                   Icon(icons[index],
                       color: Theme.of(context).primaryColor, size: 28),
                   const SizedBox(height: 8),
-                  Text(
-                    categories[index],
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  Text(categories[index],
+                      style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center),
                 ],
               ),
             ),
@@ -266,21 +270,15 @@ class _HomePageState extends State<HomePage> {
       builder: (context, state) {
         if (state is MezmurLoading) {
           return Center(
-            child: CircularProgressIndicator(
-                color: Theme.of(context).primaryColor),
-          );
+              child: CircularProgressIndicator(
+                  color: Theme.of(context).primaryColor));
         }
-
         if (state is MezmurLoaded) {
           if (state.filteredMezmurs.isEmpty) {
             return Center(
-              child: Text(
-                'ምንም መዝሙር አልተገኘም',
-                style: TextStyle(color: Colors.grey[500], fontSize: 18),
-              ),
-            );
+                child: Text('ምንም መዝሙር አልተገኘም',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 18)));
           }
-
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: state.filteredMezmurs.length,
@@ -289,65 +287,41 @@ class _HomePageState extends State<HomePage> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                    borderRadius: BorderRadius.circular(16)),
                 color: Theme.of(context).cardColor,
                 child: ListTile(
                   leading: Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
+                        gradient: LinearGradient(colors: [
                           Theme.of(context).primaryColor,
-                          Theme.of(context).primaryColor.withOpacity(0.7),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                          Theme.of(context).primaryColor.withOpacity(0.7)
+                        ]),
+                        borderRadius: BorderRadius.circular(12)),
                     child: const Icon(Icons.play_arrow, color: Colors.black),
                   ),
-                  title: Text(
-                    mezmur.title,
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.titleMedium?.color,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    mezmur.artist,
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(
-                      mezmur.isFavorite
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: mezmur.isFavorite
-                          ? Colors.red
-                          : Theme.of(context).primaryColor,
-                    ),
-                    onPressed: () {
-                      context.read<MezmurBloc>().add(ToggleFavorite(mezmur.id));
-                    },
-                  ),
+                  title: Text(mezmur.title,
+                      style: TextStyle(
+                          color: Theme.of(context).textTheme.titleMedium?.color,
+                          fontWeight: FontWeight.bold)),
+                  subtitle: Text(mezmur.artist,
+                      style: TextStyle(
+                          color:
+                              Theme.of(context).textTheme.bodyMedium?.color)),
                   onTap: () {
                     context.read<MezmurBloc>().add(SelectMezmur(mezmur));
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AudioPlayerPage(mezmur: mezmur),
-                      ),
-                    );
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                AudioPlayerPage(mezmur: mezmur)));
                   },
                 ),
               );
             },
           );
         }
-
         return const SizedBox();
       },
     );
