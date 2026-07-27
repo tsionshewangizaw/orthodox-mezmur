@@ -95,30 +95,7 @@ class AppTheme {
             fontWeight: FontWeight.bold)),
     iconTheme: IconThemeData(color: Color(0xFF8B0000)),
   );
-// gold/ brown
-  static ThemeData goldTheme = ThemeData(
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: Color(0xFF3E2723),
-    primaryColor: Color(0xFFFFD700),
-    cardColor: Color(0xFF4E342E),
-    textTheme:
-        GoogleFonts.notoSerifEthiopicTextTheme(ThemeData.dark().textTheme)
-            .copyWith(
-      headlineMedium: TextStyle(
-          color: Color(0xFFFFD700), fontSize: 24, fontWeight: FontWeight.bold),
-      titleMedium: TextStyle(color: Color(0xFFFFF8DC), fontSize: 18),
-      bodyLarge: TextStyle(color: Color(0xFFFFF8DC), fontSize: 16),
-      bodyMedium: TextStyle(color: Color(0xFFD2B48C), fontSize: 14),
-    ),
-    appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Color(0xFFFFD700),
-        titleTextStyle: TextStyle(
-            color: Color(0xFFFFD700),
-            fontSize: 22,
-            fontWeight: FontWeight.bold)),
-    iconTheme: IconThemeData(color: Color(0xFFFFD700)),
-  );
+
   //midnight blue
   static ThemeData midnightTheme = ThemeData(
     brightness: Brightness.dark,
@@ -159,31 +136,6 @@ class AppTheme {
       titleMedium: TextStyle(color: Color(0xFFE8F5E9), fontSize: 18),
       bodyLarge: TextStyle(color: Color(0xFFE8F5E9), fontSize: 16),
       bodyMedium: TextStyle(color: Color(0xFFA5D6A7), fontSize: 14),
-    ),
-    appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Color(0xFFFFD700),
-        titleTextStyle: TextStyle(
-            color: Color(0xFFFFD700),
-            fontSize: 22,
-            fontWeight: FontWeight.bold)),
-    iconTheme: IconThemeData(color: Color(0xFFFFD700)),
-  );
-
-  //royal purple
-  static ThemeData royalTheme = ThemeData(
-    brightness: Brightness.dark,
-    scaffoldBackgroundColor: Color(0xFF1A0A2E),
-    primaryColor: Color(0xFFFFD700),
-    cardColor: Color(0xFF2D1B4E),
-    textTheme:
-        GoogleFonts.notoSerifEthiopicTextTheme(ThemeData.dark().textTheme)
-            .copyWith(
-      headlineMedium: TextStyle(
-          color: Color(0xFFFFD700), fontSize: 24, fontWeight: FontWeight.bold),
-      titleMedium: TextStyle(color: Color(0xFFF3E5F5), fontSize: 18),
-      bodyLarge: TextStyle(color: Color(0xFFF3E5F5), fontSize: 16),
-      bodyMedium: TextStyle(color: Color(0xFFCE93D8), fontSize: 14),
     ),
     appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,

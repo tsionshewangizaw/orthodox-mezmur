@@ -5,6 +5,8 @@ import '../mezmur_bloc.dart';
 import '../mezmur_model.dart';
 import '../features/theme_settings.dart';
 import 'audio_player_page.dart';
+import '../models/sub_category_model.dart';
+import 'sub_category_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -46,11 +48,8 @@ class _HomePageState extends State<HomePage> {
               _themeOption(context, 'Sepia', const Color(0xFFF4ECD8),
                   Icons.auto_stories),
               _themeOption(
-                  context, 'Gold', Color(0xFF3E2723), Icons.auto_awesome),
-              _themeOption(
                   context, 'Midnight', Color(0xFF0D1B2A), Icons.nights_stay),
               _themeOption(context, 'Forest', Color(0xFF1B2E1B), Icons.nature),
-              _themeOption(context, 'Royal', Color(0xFF1A0A2E), Icons.diamond),
             ],
           ),
         );
@@ -167,13 +166,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCategories() {
-    final categories = ['ሁሉም', 'በዓላት', 'ዘማሪዎች', 'ጾም', 'ማርያም', 'ቅዳሴ'];
+    final categories = ['ሁሉም', 'ዓመታዊ በዓላት', 'በገና', 'ጾም', 'ወረብ', 'ወርሀዊ በዓላት'];
     final icons = [
       Icons.music_note,
       Icons.celebration,
-      Icons.person,
+      Icons.queue_music,
       Icons.self_improvement,
-      Icons.star,
+      Icons.calendar_month,
       Icons.church,
     ];
 
@@ -188,10 +187,32 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               if (index == 0) {
                 context.read<MezmurBloc>().add(const LoadMezmurs());
-              } else {
+              } else if (categories[index] == 'ጾም') {
                 context
                     .read<MezmurBloc>()
                     .add(FilterByCategory(categories[index]));
+              } else if (categories[index] == 'በገና') {
+                context
+                    .read<MezmurBloc>()
+                    .add(FilterByCategory(categories[index]));
+              } else {
+                final subCats =
+                    SubCategoryData.getSubCategories()[categories[index]];
+                if (subCats != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SubCategoryPage(
+                        categoryName: categories[index],
+                        subCategories: subCats,
+                      ),
+                    ),
+                  );
+                } else {
+                  context
+                      .read<MezmurBloc>()
+                      .add(FilterByCategory(categories[index]));
+                }
               }
             },
             child: Container(

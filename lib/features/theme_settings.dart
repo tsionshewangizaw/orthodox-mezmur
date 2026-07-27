@@ -57,14 +57,10 @@ class ThemeSettings extends ChangeNotifier {
         return AppTheme.whiteTheme;
       case 'Sepia':
         return AppTheme.sepiaTheme;
-      case 'Gold':
-        return AppTheme.goldTheme;
       case 'Midnight':
         return AppTheme.midnightTheme;
       case 'Forest':
         return AppTheme.forestTheme;
-      case 'Royal':
-        return AppTheme.royalTheme;
       default:
         return AppTheme.darkTheme;
     }
